@@ -15,7 +15,7 @@ import (
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
 	first := time.Now()
-	fmt.Printf("Starting procedure %s time %s", spName, first)
+	fmt.Println("Starting procedure " + spName + " time " + first.String())
 
 	conn, err := db.Conn(context)
 	resultsVal := reflect.ValueOf(results)
@@ -48,18 +48,12 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		mapTo(results, cols, rows)
 	}
 	cursor.Close()
-	calcEnd(first, spName)
+	fmt.Println("Ending procedure " + spName + " time " + time.Now().String())
 	return nil
 }
 
-func calcEnd(now time.Time, spName string) {
-	second := time.Now()
-	fmt.Printf("Ending procedure %s time %s", spName, now)
-	duration := second.Sub(now)
-	fmt.Printf("Duration %d seconds %d milliseconds", int64(duration.Seconds()), duration.Nanoseconds()/int64(time.Millisecond))
-}
-
 func populateRows(cursor driver.Rows, cols []string, rows []driver.Value) ([][]driver.Value, error) {
+	fmt.Println("Entering populateRows " + time.Now().String())
 	var allRows [][]driver.Value
 	for {
 		if err := cursor.Next(rows); err != nil {
@@ -72,10 +66,13 @@ func populateRows(cursor driver.Rows, cols []string, rows []driver.Value) ([][]d
 		copy(newRow, rows)
 		allRows = append(allRows, newRow)
 	}
+	fmt.Println("Ending populateRows " + time.Now().String())
+
 	return allRows, nil
 }
 
 func mapToSlice(slicePtr interface{}, cols []string, allRows [][]driver.Value) error {
+	fmt.Println("Entering mapToSlice " + time.Now().String())
 	slicePtrValue := reflect.ValueOf(slicePtr)
 	sliceType := slicePtrValue.Elem().Type()
 	elemType := sliceType.Elem()
@@ -87,10 +84,13 @@ func mapToSlice(slicePtr interface{}, cols []string, allRows [][]driver.Value) e
 			slicePtrValue.Elem().Set(reflect.Append(slicePtrValue.Elem(), newElem))
 		}
 	}
+	fmt.Println("Ending mapToSlice " + time.Now().String())
 	return nil
 }
 
 func mapTo(obj interface{}, cols []string, dests []driver.Value) {
+	fmt.Println("Entering mapTo " + time.Now().String())
+
 	type CustomMap struct {
 		string
 		bool
@@ -139,33 +139,41 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 			}
 		}
 	}
+	fmt.Println("Ending mapTo " + time.Now().String())
 }
 
 func buildExecutionArguments(cursor *driver.Rows, args ...interface{}) []interface{} {
+	fmt.Println("Entering buildExec " + time.Now().String())
 	execArgs := make([]interface{}, len(args)+1)
 	execArgs[0] = sql.Out{Dest: cursor}
 	copy(execArgs[1:], args)
+	fmt.Println("Ending buildExec " + time.Now().String())
 	return execArgs
 }
 
 func buildCmdText(spName string, args ...interface{}) string {
+	fmt.Println("Entering buildCmdText " + time.Now().String())
 	cmdText := fmt.Sprintf("BEGIN %s(:1", spName)
 	for i := 0; i < len(args); i++ {
 		cmdText += fmt.Sprintf(", :%d", i+2)
 	}
 	cmdText += "); END;"
+	fmt.Println("Ending buildCmdText " + time.Now().String())
 	return cmdText
 }
 
 func trimTrailingWhitespace(input string) string {
+	fmt.Println("Entering trimTrailingWhitespace " + time.Now().String())
 	if len(input) == 0 {
 		return input
 	}
 	input = strings.TrimRight(input, " ")
+	fmt.Println("Ending trimTrailingWhitespace " + time.Now().String())
 	return input
 }
 
 func populateOne(cursor driver.Rows, cols []string, rows []driver.Value) error {
+	fmt.Println("Entering populateOne " + time.Now().String())
 	for {
 		if err := cursor.Next(rows); err != nil {
 			if err == io.EOF {
@@ -174,5 +182,6 @@ func populateOne(cursor driver.Rows, cols []string, rows []driver.Value) error {
 			return err
 		}
 	}
+	fmt.Println("Ending populateOne " + time.Now().String())
 	return nil
 }
