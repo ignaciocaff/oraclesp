@@ -8,17 +8,12 @@ import (
 	"io"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	ora "github.com/sijms/go-ora/v2"
 )
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
-	first := time.Now()
-
-	fmt.Println("Starting procedure " + spName + " time " + first.String())
-
 	resultsVal := reflect.ValueOf(results)
 
 	var cursor ora.RefCursor
@@ -49,7 +44,6 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		mapTo(results, cols, dests)
 	}
 	cursor.Close()
-	fmt.Println("Ending procedure " + spName + " time " + time.Now().String())
 	return nil
 }
 
