@@ -14,6 +14,9 @@ import (
 )
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
+	first := time.Now()
+	fmt.Printf("Starting procedure %s time %s", spName, first)
+
 	conn, err := db.Conn(context)
 	resultsVal := reflect.ValueOf(results)
 
@@ -27,39 +30,33 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 
 	execArgs := buildExecutionArguments(&cursor, args...)
 
-	fmt.Printf("Before execution %s time %s", spName, time.Now().String())
 	if _, err := conn.ExecContext(context, cmdText, execArgs...); err != nil {
 		return err
 	}
-	fmt.Printf("After execution %s time %s", spName, time.Now().String())
 
 	cols := cursor.(driver.RowsColumnTypeScanType).Columns()
 	rows := make([]driver.Value, len(cols))
 
 	if resultsVal.Kind() == reflect.Ptr && resultsVal.Elem().Kind() == reflect.Slice {
-		fmt.Printf("Before populate multiple %s time %s", spName, time.Now().String())
 		allRows, err := populateRows(cursor, cols, rows)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("After populate multiple %s time %s", spName, time.Now().String())
-
-		fmt.Printf("Before mapToSlice %s time %s", spName, time.Now().String())
 		mapToSlice(results, cols, allRows)
-		fmt.Printf("After mapToSlice %s time %s", spName, time.Now().String())
 	} else {
-		fmt.Printf("Before populate one %s time %s", spName, time.Now().String())
 		populateOne(cursor, cols, rows)
-		fmt.Printf("After populate one %s time %s", spName, time.Now().String())
-
-		fmt.Printf("Before mapTo %s time %s", spName, time.Now().String())
 		mapTo(results, cols, rows)
-		fmt.Printf("After mapTo %s time %s", spName, time.Now().String())
-
 	}
-
 	cursor.Close()
+	defer calcEnd(first, spName)
 	return nil
+}
+
+func calcEnd(now time.Time, spName string) {
+	second := time.Now()
+	fmt.Printf("Ending procedure %s time %s", spName, now)
+	duration := second.Sub(now)
+	fmt.Printf("Duration %d seconds %d milliseconds", int64(duration.Seconds()), duration.Nanoseconds()/int64(time.Millisecond))
 }
 
 func populateRows(cursor driver.Rows, cols []string, rows []driver.Value) ([][]driver.Value, error) {
