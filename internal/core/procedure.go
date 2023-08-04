@@ -48,7 +48,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		mapTo(results, cols, rows)
 	}
 	cursor.Close()
-	defer calcEnd(first, spName)
+	calcEnd(first, spName)
 	return nil
 }
 
