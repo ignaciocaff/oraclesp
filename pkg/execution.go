@@ -1,4 +1,4 @@
-package pkg
+package oraclesp
 
 import (
 	"github.com/ignaciocaff/oraclesp/internal/core"
