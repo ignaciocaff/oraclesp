@@ -107,7 +107,9 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 	}
 	for i, col := range cols {
 		fieldName := tags[col].string
+		fmt.Printf("mapping %s to %s\n", col, fieldName)
 		field := v.FieldByName(fieldName)
+		fmt.Printf("field %v\n", field)
 		if field.IsValid() && field.CanSet() {
 			fieldType := field.Type()
 			val := dests[i]
