@@ -122,7 +122,7 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 				if destType.ConvertibleTo(fieldType) {
 					field.Set(reflect.ValueOf(val).Convert(fieldType))
 				} else {
-					fmt.Printf("can not convert %v to %v\n", destType, fieldType)
+					fmt.Printf("can not convert %v name dest %v in to %v with val %v\n", fieldName, destType, fieldType, val)
 				}
 			} else {
 				field.Set(reflect.Zero(fieldType))
