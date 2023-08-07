@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	ora "github.com/sijms/go-ora/v2"
@@ -81,53 +83,40 @@ func mapToSlice(slicePtr interface{}, cols []string, allRows [][]driver.Value) e
 }
 
 func mapTo(obj interface{}, cols []string, dests []driver.Value) {
-	type CustomMap struct {
-		string
-		bool
-	}
 	v := reflect.ValueOf(obj).Elem()
 	t := reflect.TypeOf(obj).Elem()
-	tags := make(map[string]CustomMap)
 
 	if v.Kind() != reflect.Struct {
 		fmt.Println("it is not a struct")
 		return
 	}
-
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		fieldName := field.Name
+		// tags behavior
 		arrayTags := field.Tag.Get("oracle")
 		parts := strings.Split(arrayTags, ",")
 		tagValue := parts[0]
-		convertible := len(parts) > 1 && parts[1] == "convert"
-		if tagValue != "" {
-			tags[tagValue] = CustomMap{fieldName, convertible}
+		//convertible := len(parts) > 1 && parts[1] == "convert"
+		// end tags behavior
+
+		fieldType := field.Type
+		structField := v.Field(i)
+		var posInCol int
+		for j, elem := range cols {
+			if elem == tagValue {
+				posInCol = j
+				break
+			}
 		}
-	}
-	for i, col := range cols {
-		fieldName := tags[col].string
-		fmt.Printf("mapping %s to %s\n", col, fieldName)
-		field := v.FieldByName(fieldName)
-		fmt.Printf("field %v\n", &field)
-		if field.IsValid() && field.CanSet() {
-			fieldType := field.Type()
-			val := dests[i]
-			if val != nil {
-				if tags[col].bool && fieldType.Kind() == reflect.Bool {
-					val = val == "S"
-				}
-				if fieldType.Kind() == reflect.String {
-					val = trimTrailingWhitespace(val.(string))
-				}
-				destType := reflect.TypeOf(val)
-				if destType.ConvertibleTo(fieldType) {
-					field.Set(reflect.ValueOf(val).Convert(fieldType))
-				} else {
-					fmt.Printf("can not convert %v name dest %v in to %v with val %v\n", fieldName, destType, fieldType, val)
-				}
+		if structField.IsValid() && structField.CanSet() {
+			value := dests[posInCol]
+			if value != nil {
+				valueType := reflect.TypeOf(value)
+				destValue := reflect.New(fieldType).Elem()
+				fieldStrategyByType(fieldType, valueType, value, &destValue)
+				structField.Set(destValue)
 			} else {
-				field.Set(reflect.Zero(fieldType))
+				structField.Set(reflect.Zero(fieldType))
 			}
 		}
 	}
@@ -167,4 +156,53 @@ func populateOne(cursor *ora.DataSet, cols []string, rows []driver.Value) error 
 		}
 	}
 	return nil
+}
+
+func fieldStrategyByType(fieldType reflect.Type, valueType reflect.Type, value driver.Value, destValue *reflect.Value) (reflect.Value, error) {
+	switch value := value.(type) {
+	case string:
+		if valueType.Kind() == reflect.String && fieldType.Kind() == reflect.Int {
+			desInt, _ := strconv.Atoi(value)
+			destValue.SetInt(int64(desInt))
+		} else if fieldType.Kind() == reflect.String {
+			destValue.SetString(trimTrailingWhitespace(value))
+		} else if fieldType.Kind() == reflect.Bool && valueType.Kind() == reflect.String {
+			if len(value) == 1 {
+				if value == "S" || value == "N" {
+					destValue.SetBool(value == "S")
+				}
+			}
+		}
+	case int64:
+		if fieldType.Kind() == reflect.Int {
+			destValue.SetInt(value)
+		} else if fieldType.Kind() == reflect.Int64 {
+			destValue.SetInt(value)
+		} else if fieldType.Kind() == reflect.String {
+			destValue.SetString(strconv.FormatInt(value, 10))
+		}
+	case float64:
+		if fieldType.Kind() == reflect.Float32 {
+			destValue.SetFloat(value)
+		} else if fieldType.Kind() == reflect.Float64 {
+			destValue.SetFloat(value)
+		} else if fieldType.Kind() == reflect.String {
+			destValue.SetString(strconv.FormatFloat(value, 'f', -1, 64))
+		}
+	case bool:
+		if fieldType.Kind() == reflect.Bool {
+			destValue.SetBool(value)
+		} else if fieldType.Kind() == reflect.String {
+			destValue.SetString(strconv.FormatBool(value))
+		}
+	case time.Time:
+		if fieldType == reflect.TypeOf(time.Time{}) {
+			destValue.Set(reflect.ValueOf(value))
+		} else if fieldType.Kind() == reflect.String {
+			destValue.SetString(value.Format(time.RFC3339))
+		}
+	default:
+		fmt.Printf("Unhandled type: %T\n", value)
+	}
+	return reflect.Value{}, nil
 }
