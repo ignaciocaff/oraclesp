@@ -21,7 +21,6 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 
 	fmt.Printf("context type: %T\n", ctx)
 	fmt.Printf("context value: %v\n", ctx)
-
 	ctxx := context.Background()
 	var cursor ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
