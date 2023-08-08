@@ -15,15 +15,19 @@ import (
 	ora "github.com/sijms/go-ora/v2"
 )
 
-func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
+func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, results interface{}, args ...interface{}) error {
 	fmt.Println("Executing stored procedure: ", spName)
 	resultsVal := reflect.ValueOf(results)
 
+	fmt.Printf("context type: %T\n", ctx)
+	fmt.Printf("context value: %v\n", ctx)
+
+	//ctx := context
 	var cursor ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
 	execArgs := buildExecutionArguments(&cursor, args...)
 
-	_, err := db.ExecContext(context, cmdText, execArgs...)
+	_, err := db.ExecContext(ctx, cmdText, execArgs...)
 
 	if err != nil {
 		panic(fmt.Errorf("error scanning db: %w", err))
