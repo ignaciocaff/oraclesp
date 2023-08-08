@@ -16,6 +16,7 @@ import (
 )
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
+	fmt.Println("Executing stored procedure: ", spName)
 	resultsVal := reflect.ValueOf(results)
 
 	var cursor ora.RefCursor
@@ -46,6 +47,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		mapTo(results, cols, dests)
 	}
 	cursor.Close()
+	fmt.Println("Finished executing stored procedure: ", spName)
 	return nil
 }
 
