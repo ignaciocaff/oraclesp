@@ -46,7 +46,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
-	cursor.Close()
+	//cursor.Close()
 	fmt.Println("Finished executing stored procedure: ", spName)
 	return nil
 }
