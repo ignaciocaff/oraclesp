@@ -47,6 +47,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 		mapTo(results, cols, dests)
 	}
 	//cursor.Close()
+	rows.Close()
 	return nil
 }
 
