@@ -16,11 +16,8 @@ import (
 )
 
 func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, results interface{}, args ...interface{}) error {
-	fmt.Println("Executing stored procedure: ", spName)
 	resultsVal := reflect.ValueOf(results)
 
-	fmt.Printf("context type: %T\n", ctx)
-	fmt.Printf("context value: %v\n", ctx)
 	ctxx := context.Background()
 	var cursor ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
@@ -50,7 +47,6 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 		mapTo(results, cols, dests)
 	}
 	//cursor.Close()
-	fmt.Println("Finished executing stored procedure: ", spName)
 	return nil
 }
 
