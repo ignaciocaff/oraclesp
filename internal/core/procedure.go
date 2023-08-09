@@ -49,7 +49,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
-	cursor.Close()
+	//cursor.Close()
 	fmt.Println("Finished executing stored procedure: ", spName)
 	return nil
 }
