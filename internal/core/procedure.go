@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -15,13 +14,13 @@ import (
 	ora "github.com/sijms/go-ora/v2"
 )
 
-func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, results interface{}, args ...interface{}) error {
+func ExecuteStoreProcedure(db *sqlx.DB, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
 	var cursor ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
 	execArgs := buildExecutionArguments(&cursor, args...)
 
-	_, err := db.ExecContext(ctx, cmdText, execArgs...)
+	_, err := db.Exec(cmdText, execArgs...)
 
 	if err != nil {
 		panic(fmt.Errorf("error scanning db: %w", err))
@@ -44,7 +43,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
-	rows.Close()
+	//rows.Close()
 	//defer cursor.Close()
 	return nil
 }
