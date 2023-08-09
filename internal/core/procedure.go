@@ -17,13 +17,11 @@ import (
 
 func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
-
-	ctxx := context.Background()
 	var cursor ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
 	execArgs := buildExecutionArguments(&cursor, args...)
 
-	_, err := db.ExecContext(ctxx, cmdText, execArgs...)
+	_, err := db.ExecContext(ctx, cmdText, execArgs...)
 
 	if err != nil {
 		panic(fmt.Errorf("error scanning db: %w", err))
@@ -46,8 +44,6 @@ func ExecuteStoreProcedure(db *sqlx.DB, ctx context.Context, spName string, resu
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
-	//cursor.Close()
-	rows.Close()
 	return nil
 }
 
