@@ -17,9 +17,9 @@ import (
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
-	var cursor ora.RefCursor
+	var cursor *ora.RefCursor
 	cmdText := buildCmdText(spName, args...)
-	execArgs := buildExecutionArguments(&cursor, args...)
+	execArgs := buildExecutionArguments(cursor, args...)
 
 	_, err := db.ExecContext(context, cmdText, execArgs...)
 
@@ -28,7 +28,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	}
 
 	rows, err := cursor.Query()
-	cursor.Close()
+
 	if err != nil {
 		return err
 	}
@@ -45,6 +45,12 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
+	defer func() {
+		err = cursor.Close()
+		if err != nil {
+			fmt.Println("can't close cursor: ", err)
+		}
+	}()
 	return nil
 }
 
