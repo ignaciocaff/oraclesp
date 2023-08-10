@@ -15,7 +15,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 )
-
+// Store procedure with Godror
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
 	var driverRows driver.Rows
