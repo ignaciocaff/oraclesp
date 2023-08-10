@@ -11,50 +11,47 @@ import (
 	"strings"
 	"time"
 
+	godror "github.com/godror/godror"
+
 	"github.com/jmoiron/sqlx"
-	ora "github.com/sijms/go-ora/v2"
 )
 
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
-	var cursor ora.RefCursor
+	var driverRows driver.Rows
 	cmdText := buildCmdText(spName, args...)
-	execArgs := buildExecutionArguments(&cursor, args...)
+	execArgs := buildExecutionArguments(&driverRows, args...)
 
-	_, err := db.Exec(cmdText, execArgs...)
-
+	stmt, err := db.PreparexContext(context, cmdText)
 	if err != nil {
-		panic(fmt.Errorf("error scanning db: %w", err))
+		return err
 	}
-
-	rows, err := cursor.Query()
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(context, execArgs...); err != nil {
+		return err
+	}
+	defer driverRows.Close()
 
 	if err != nil {
 		return err
 	}
-	cols := rows.Columns()
+	cols := driverRows.(driver.RowsColumnTypeScanType).Columns()
 	dests := make([]driver.Value, len(cols))
 
 	if resultsVal.Kind() == reflect.Ptr && resultsVal.Elem().Kind() == reflect.Slice {
-		allRows, err := populateRows(rows, cols, dests)
+		allRows, err := populateRows(driverRows, dests)
 		if err != nil {
 			return err
 		}
 		mapToSlice(results, cols, allRows)
 	} else {
-		populateOne(rows, cols, dests)
+		populateOne(driverRows, dests)
 		mapTo(results, cols, dests)
 	}
-	/*defer func() {
-		err = cursor.Close()
-		if err != nil {
-			fmt.Println("can't close cursor: ", err)
-		}
-	}()*/
 	return nil
 }
 
-func populateRows(cursor *ora.DataSet, cols []string, rows []driver.Value) ([][]driver.Value, error) {
+func populateRows(cursor driver.Rows, rows []driver.Value) ([][]driver.Value, error) {
 	var allRows [][]driver.Value
 	for {
 		if err := cursor.Next(rows); err != nil {
@@ -125,7 +122,7 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 	}
 }
 
-func buildExecutionArguments(cursor *ora.RefCursor, args ...interface{}) []interface{} {
+func buildExecutionArguments(cursor *driver.Rows, args ...interface{}) []interface{} {
 	execArgs := make([]interface{}, len(args)+1)
 	execArgs[0] = sql.Out{Dest: cursor}
 	copy(execArgs[1:], args)
@@ -149,7 +146,7 @@ func trimTrailingWhitespace(input string) string {
 	return input
 }
 
-func populateOne(cursor *ora.DataSet, cols []string, rows []driver.Value) error {
+func populateOne(cursor driver.Rows, rows []driver.Value) error {
 	for {
 		if err := cursor.Next(rows); err != nil {
 			if err == io.EOF {
@@ -203,6 +200,19 @@ func fieldStrategyByType(fieldType reflect.Type, valueType reflect.Type, value d
 			destValue.Set(reflect.ValueOf(value))
 		} else if fieldType.Kind() == reflect.String {
 			destValue.SetString(value.Format(time.RFC3339))
+		}
+	case godror.Number:
+		val, err := strconv.Atoi(value.String())
+		if err != nil {
+			fmt.Printf("Error strconv.Atoi: %+v", err)
+		} else {
+			if fieldType.Kind() == reflect.Int {
+				destValue.SetInt(int64(val))
+			} else if fieldType.Kind() == reflect.Int64 {
+				destValue.SetInt(int64(val))
+			} else if fieldType.Kind() == reflect.String {
+				destValue.SetString(value.String())
+			}
 		}
 	default:
 		fmt.Printf("Unhandled type: %T\n", value)
