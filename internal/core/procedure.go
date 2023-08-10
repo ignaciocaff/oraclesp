@@ -28,6 +28,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	}
 
 	rows, err := cursor.Query()
+	cursor.Close()
 	if err != nil {
 		return err
 	}
@@ -44,8 +45,6 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		populateOne(rows, cols, dests)
 		mapTo(results, cols, dests)
 	}
-	defer rows.Close()
-	defer cursor.Close()
 	return nil
 }
 
