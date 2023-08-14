@@ -21,7 +21,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	resultsVal := reflect.ValueOf(results)
 	var driverRows driver.Rows
 	cmdText := buildCmdText(spName, args...)
-	execArgs := buildExecutionArguments(driverRows, args...)
+	execArgs := buildExecutionArguments(&driverRows, args...)
 
 	stmt, err := db.PrepareContext(context, cmdText)
 	if err != nil {
@@ -123,7 +123,7 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 	}
 }
 
-func buildExecutionArguments(cursor driver.Rows, args ...interface{}) []interface{} {
+func buildExecutionArguments(cursor *driver.Rows, args ...interface{}) []interface{} {
 	execArgs := make([]interface{}, len(args)+1)
 	execArgs[0] = sql.Out{Dest: cursor}
 	copy(execArgs[1:], args)
