@@ -47,7 +47,8 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		populateOne(driverRows, dests)
 		mapTo(results, cols, dests)
 	}
-	stmt.Close()
+	defer driverRows.Close()
+	defer stmt.Close()
 	return nil
 }
 
@@ -64,7 +65,6 @@ func populateRows(cursor driver.Rows, rows []driver.Value) ([][]driver.Value, er
 		copy(newRow, rows)
 		allRows = append(allRows, newRow)
 	}
-	cursor.Close()
 	return allRows, nil
 }
 
@@ -156,7 +156,6 @@ func populateOne(cursor driver.Rows, rows []driver.Value) error {
 			return err
 		}
 	}
-	cursor.Close()
 	return nil
 }
 
