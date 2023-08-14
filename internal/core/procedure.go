@@ -22,8 +22,12 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	var driverRows driver.Rows
 	cmdText := buildCmdText(spName, args...)
 	execArgs := buildExecutionArguments(&driverRows, args...)
+	conn, err := db.Conn(context)
+	if err != nil {
+		return err
+	}
 
-	stmt, err := db.PrepareContext(context, cmdText)
+	stmt, err := conn.PrepareContext(context, cmdText)
 	if err != nil {
 		return err
 	}
@@ -49,6 +53,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	}
 	defer driverRows.Close()
 	defer stmt.Close()
+	defer conn.Close()
 	return nil
 }
 
