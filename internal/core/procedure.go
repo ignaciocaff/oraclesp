@@ -15,6 +15,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 )
+
 // Store procedure with Godror
 func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, results interface{}, args ...interface{}) error {
 	resultsVal := reflect.ValueOf(results)
@@ -22,15 +23,13 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	cmdText := buildCmdText(spName, args...)
 	execArgs := buildExecutionArguments(&driverRows, args...)
 
-	stmt, err := db.PreparexContext(context, cmdText)
+	stmt, err := db.PrepareContext(context, cmdText)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 	if _, err := stmt.ExecContext(context, execArgs...); err != nil {
 		return err
 	}
-	defer driverRows.Close()
 
 	if err != nil {
 		return err
@@ -48,6 +47,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 		populateOne(driverRows, dests)
 		mapTo(results, cols, dests)
 	}
+	stmt.Close()
 	return nil
 }
 
@@ -64,6 +64,7 @@ func populateRows(cursor driver.Rows, rows []driver.Value) ([][]driver.Value, er
 		copy(newRow, rows)
 		allRows = append(allRows, newRow)
 	}
+	cursor.Close()
 	return allRows, nil
 }
 
@@ -155,6 +156,7 @@ func populateOne(cursor driver.Rows, rows []driver.Value) error {
 			return err
 		}
 	}
+	cursor.Close()
 	return nil
 }
 
