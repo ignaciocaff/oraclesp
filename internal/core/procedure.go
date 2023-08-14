@@ -21,7 +21,7 @@ func ExecuteStoreProcedure(db *sqlx.DB, context context.Context, spName string, 
 	resultsVal := reflect.ValueOf(results)
 	var driverRows driver.Rows
 	cmdText := buildCmdText(spName, args...)
-	execArgs := buildExecutionArguments(&driverRows, args...)
+	execArgs := buildExecutionArguments(driverRows, args...)
 
 	stmt, err := db.PrepareContext(context, cmdText)
 	if err != nil {
@@ -114,7 +114,7 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 			if value != nil {
 				valueType := reflect.TypeOf(value)
 				destValue := reflect.New(fieldType).Elem()
-				fieldStrategyByType(fieldType, valueType, value, &destValue)
+				fieldStrategyByType(fieldType, valueType, value, destValue)
 				structField.Set(destValue)
 			} else {
 				structField.Set(reflect.Zero(fieldType))
@@ -123,7 +123,7 @@ func mapTo(obj interface{}, cols []string, dests []driver.Value) {
 	}
 }
 
-func buildExecutionArguments(cursor *driver.Rows, args ...interface{}) []interface{} {
+func buildExecutionArguments(cursor driver.Rows, args ...interface{}) []interface{} {
 	execArgs := make([]interface{}, len(args)+1)
 	execArgs[0] = sql.Out{Dest: cursor}
 	copy(execArgs[1:], args)
@@ -153,13 +153,14 @@ func populateOne(cursor driver.Rows, rows []driver.Value) error {
 			if err == io.EOF {
 				break
 			}
+			fmt.Printf("Error cursor.Next: %+v", err)
 			return err
 		}
 	}
 	return nil
 }
 
-func fieldStrategyByType(fieldType reflect.Type, valueType reflect.Type, value driver.Value, destValue *reflect.Value) (reflect.Value, error) {
+func fieldStrategyByType(fieldType reflect.Type, valueType reflect.Type, value driver.Value, destValue reflect.Value) (reflect.Value, error) {
 	switch value := value.(type) {
 	case string:
 		if valueType.Kind() == reflect.String && fieldType.Kind() == reflect.Int {
