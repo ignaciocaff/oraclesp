@@ -188,6 +188,12 @@ func fieldStrategyByType(fieldType reflect.Type, valueType reflect.Type, value d
 		} else if fieldType.Kind() == reflect.String {
 			destValue.SetString(strconv.FormatInt(value, 10))
 		}
+	case []uint8:
+		if fieldType.Kind() == reflect.Slice && fieldType.Elem().Kind() == reflect.Uint8 {
+			byteArray := make([]byte, len(value))
+			copy(byteArray, value)
+			destValue.SetBytes(byteArray)
+		}
 	case float64:
 		if fieldType.Kind() == reflect.Float32 {
 			destValue.SetFloat(value)
